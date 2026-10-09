@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#14111c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>Aura</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,6 +17,7 @@
 <style>
 :root{
   --h:265;
+  color-scheme:dark;
   --ink:#14111c;
   --plum:#1d1928;
   --plum2:#272134;
@@ -131,10 +138,10 @@ input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-
 input[type=range]:hover::-moz-range-thumb{opacity:1}
 .pr{display:flex;align-items:center;justify-content:flex-end;gap:6px}
 .pr input{width:96px}
-.pr .ic{width:20px;height:20px;color:var(--mute)}
+.pr span.ic{width:20px;height:20px;color:var(--mute)}
 
 /* now playing */
-#np{position:fixed;inset:0;z-index:20;background:var(--ink);transform:translateY(100%);transition:transform .45s cubic-bezier(.2,.8,.2,1);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(20px,5vw,80px);padding:clamp(18px,4vw,56px);overflow:auto;align-items:center}
+#np{position:fixed;inset:0;z-index:20;background:var(--ink);transform:translateY(100%);transition:transform .45s cubic-bezier(.2,.8,.2,1);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(20px,5vw,80px);padding:clamp(18px,4vw,56px);overflow-y:auto;overflow-x:hidden;align-items:center}
 #np.open{transform:none}
 #npBg{position:absolute;inset:0;z-index:-1;background-size:cover;background-position:center;filter:blur(70px) saturate(1.4);opacity:.55;transform:scale(1.3)}
 #np::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(20,17,28,.2),var(--ink) 95%)}
@@ -144,7 +151,9 @@ input[type=range]:hover::-moz-range-thumb{opacity:1}
 .nr h1{font-size:clamp(30px,4.4vw,54px);overflow-wrap:anywhere}
 .nr .by{font-size:19px;color:var(--mute)}
 .whybox{background:hsl(var(--h) 45% 25%/.5);border-radius:14px;padding:12px 16px;color:hsl(var(--h) 85% 82%);font-weight:500;align-self:flex-start}
-.upnext{max-height:26vh;overflow:auto;margin-top:6px}
+.upnext{max-height:30vh;overflow:auto;margin-top:6px}
+.upnext .row{grid-template-columns:46px minmax(0,1fr) 44px}
+.upnext h2{font-size:18px;margin-top:6px}
 
 #qp{position:fixed;top:0;right:0;bottom:92px;width:min(380px,100%);background:var(--plum);z-index:10;transform:translateX(105%);transition:transform .3s cubic-bezier(.2,.8,.2,1);padding:18px;overflow:auto;border-left:1px solid var(--line)}
 #qp.open{transform:none}
@@ -190,6 +199,13 @@ input[type=range]:hover::-moz-range-thumb{opacity:1}
   #ytWrap{bottom:150px;left:8px}
   .bar{grid-template-columns:96px 1fr 40px}
 }
+.player{position:relative}
+.mprog{display:none}
+.row.on .n{font-size:0}
+.row.on .n::before{content:"";display:inline-block;width:16px;height:14px;background:linear-gradient(var(--acc),var(--acc)) 0 100%/3px 100% no-repeat,linear-gradient(var(--acc),var(--acc)) 6px 100%/3px 100% no-repeat,linear-gradient(var(--acc),var(--acc)) 12px 100%/3px 100% no-repeat;animation:eq 1s infinite ease-in-out}
+body.paused .row.on .n::before{animation-play-state:paused}
+@keyframes eq{0%,100%{background-size:3px 30%,3px 90%,3px 50%}50%{background-size:3px 100%,3px 40%,3px 80%}}
+@media (max-width:860px){.mprog{display:block;position:absolute;left:0;top:0;height:2px;width:var(--mp,0%);background:var(--acc);transition:width .3s linear}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
@@ -207,6 +223,7 @@ input[type=range]:hover::-moz-range-thumb{opacity:1}
   </aside>
   <main id="main" tabindex="-1"></main>
   <footer class="player">
+    <i class="mprog"></i>
     <div class="pl">
       <div class="mini" id="pArt" data-open="np"></div>
       <div class="meta" data-open="np"><b id="pTitle">Nothing playing</b><span id="pArtist">Pick something to start</span></div>
@@ -327,7 +344,7 @@ const search=(q,limit=24)=>api('/tracks/search?query='+encodeURIComponent(q)+'&l
 const COUNTRY='IN'; // iTunes store region. Change to 'US', 'GB' etc. if you like.
 function jsonp(url){return new Promise((res,rej)=>{const cb='_j'+Date.now()+Math.floor(Math.random()*1e4);const sc=document.createElement('script');window[cb]=d=>{res(d);sc.remove();delete window[cb]};sc.onerror=()=>{rej(new Error('jsonp'));sc.remove()};sc.src=url+'&callback='+cb;document.head.appendChild(sc)})}
 const normI=x=>{
-  const o={id:'i'+x.trackId,title:x.trackName||'Untitled',artist:x.artistName||'Unknown artist',genre:x.primaryGenreName||'Other',mood:'',dur:30,art:(x.artworkUrl100||'').replace('100x100bb','600x600bb'),plays:0,src:'itunes',url:x.previewUrl};
+  const o={id:'i'+x.trackId,title:x.trackName||'Untitled',artist:x.artistName||'Unknown artist',genre:x.primaryGenreName||'Other',mood:'',dur:30,art:(x.artworkUrl100||'').replace('100x100bb','600x600bb'),plays:0,src:'itunes',url:x.previewUrl,full:Math.round((x.trackTimeMillis||0)/1000)};
   TR.set(o.id,Object.assign(TR.get(o.id)||{},o));return TR.get(o.id);
 };
 async function itunes(q,limit=30){
@@ -386,7 +403,7 @@ async function recommend(){
 
 /* ---------- player ---------- */
 const au=$('#audio');
-let Q=[],qi=-1,cur=null,shuffle=false,rep=0,started=false,counted=false,eng='au',yt=null,ytReady=false,ytTimer=null,ytWarned=false;
+let Q=[],qi=-1,cur=null,shuffle=false,rep=0,started=false,counted=false,eng='au',yt=null,ytReady=false,ytTimer=null,ytWarned=false,lazyPos=null,resumeAt=0;
 au.volume=store.get('vol',.8);$$('.vol').forEach(v=>{v.value=au.volume*100;setP(v)});
 function setP(inp){inp.style.setProperty('--p',(inp.value/inp.max*100)+'%')}
 const ytKey=()=>store.get('ytkey','');
@@ -431,6 +448,7 @@ function play(list,i){
 }
 async function load(){
   const t=cur=Q[qi];if(!t)return;
+  const startAt=resumeAt;resumeAt=0;lazyPos=null;
   started=true;counted=false;updateUI();
   stopYT();au.pause();
   if(t.src==='itunes'&&ytKey()){
@@ -440,7 +458,7 @@ async function load(){
       if(vid){
         await ytInit();if(cur!==t)return;
         eng='yt';$('#ytWrap').classList.add('on');
-        yt.loadVideoById(vid);yt.setVolume(au.volume*100);
+        yt.loadVideoById(vid,startAt);yt.setVolume(au.volume*100);
         clearInterval(ytTimer);ytTimer=setInterval(tick,300);playState();return;
       }
     }catch(e){if(!ytWarned){ytWarned=true;toast('YouTube lookup failed. Playing the 30s preview.')}}
@@ -448,6 +466,7 @@ async function load(){
   if(cur!==t)return;
   eng='au';
   au.src=t.src==='itunes'?t.url:API+'/tracks/'+t.id+'/stream?app_name='+APP;
+  if(startAt>1)au.addEventListener('loadedmetadata',()=>{try{au.currentTime=Math.min(startAt,(au.duration||startAt)-1)}catch(e){}},{once:true});
   const p=au.play();if(p&&p.catch)p.catch(()=>{});
   if(t.src==='itunes'&&!ytKey()&&!ytWarned){ytWarned=true;toast('30s preview. Add a YouTube key to hear full songs.')}
 }
@@ -476,6 +495,7 @@ function prev(){
 }
 const toggle=()=>{
   if(!cur)return;
+  if(lazyPos!==null){resumeAt=lazyPos;load();return}
   if(eng==='yt'&&ytReady){yt.getPlayerState()===1?yt.pauseVideo():yt.playVideo();setTimeout(playState,200)}
   else au.paused?au.play():au.pause();
 };
@@ -484,6 +504,8 @@ function tick(){
   $$('.seek').forEach(x=>{if(!x._drag){x.value=d?c/d*1000:0;setP(x)}});
   $$('.tcur').forEach(e=>e.textContent=fmt(c));
   $$('.tdur').forEach(e=>e.textContent=fmt(d));
+  root.style.setProperty('--mp',(d?c/d*100:0)+'%');
+  if('mediaSession' in navigator&&navigator.mediaSession.setPositionState&&d&&isFinite(d)&&Math.floor(c)!==tick._s){tick._s=Math.floor(c);try{navigator.mediaSession.setPositionState({duration:d,position:Math.min(c,d),playbackRate:1})}catch(e){}}
   if(!counted&&c>10&&cur){
     counted=true;S.stats.plays++;
     S.recent=[cur,...S.recent.filter(t=>t.id!==cur.id)].slice(0,30);
@@ -495,7 +517,7 @@ au.addEventListener('timeupdate',()=>{if(eng==='au')tick()});
 au.addEventListener('ended',()=>{if(eng==='au')next(true)});
 au.addEventListener('play',playState);au.addEventListener('pause',playState);
 au.addEventListener('error',()=>{if(cur&&eng==='au'&&au.getAttribute('src')){toast('Couldn\u2019t play that one. Skipping.');started=false;setTimeout(()=>next(),600)}});
-function playState(){const p=isPaused();$$('[data-pp]').forEach(b=>b.innerHTML=p?I.play:I.pause);if('mediaSession' in navigator)navigator.mediaSession.playbackState=p?'paused':'playing'}
+function playState(){const p=isPaused();document.body.classList.toggle('paused',p);$$('[data-pp]').forEach(b=>b.innerHTML=p?I.play:I.pause);if('mediaSession' in navigator)navigator.mediaSession.playbackState=p?'paused':'playing'}
 $$('.seek').forEach(x=>{
   x.addEventListener('input',()=>{x._drag=true;setP(x);const d=curDur();if(d)seekTo(x.value/1000*d)});
   x.addEventListener('change',()=>{x._drag=false});
@@ -527,6 +549,7 @@ function updateUI(){
     navigator.mediaSession.setActionHandler('pause',()=>{if(!isPaused())toggle()});
     navigator.mediaSession.setActionHandler('nexttrack',()=>next());
     navigator.mediaSession.setActionHandler('previoustrack',prev);
+    try{navigator.mediaSession.setActionHandler('seekto',e=>{if(e.seekTime!=null)seekTo(e.seekTime)})}catch(e){}
   }
 }
 function markRows(){
@@ -553,7 +576,7 @@ function renderQueue(){
   LISTS.queue=Q;
   const rows=Q.map((t,i)=>i>=qi?qrow(t,i):'').join('');
   qp.innerHTML='<h2>Playing now</h2><div class="rows">'+qrow(cur,qi)+'</div><h2 style="margin-top:22px">Up next</h2><div class="rows">'+(Q.slice(qi+1).map((t,i)=>qrow(t,qi+1+i)).join('')||'<p class="sub">Autoplay will add songs picked for you.</p>')+'</div>';
-  const up=$('#upnext');up.innerHTML='<div class="rows">'+Q.slice(qi+1,qi+4).map((t,i)=>qrow(t,qi+1+i)).join('')+'</div>';
+  const up=$('#upnext');up.innerHTML=Q.length>qi+1?'<h2>Up next</h2><div class="rows">'+Q.slice(qi+1,qi+4).map((t,i)=>qrow(t,qi+1+i)).join('')+'</div>':'';
 }
 const qrow=(t,i)=>'<div class="row'+(i===qi?' on':'')+'" data-play="queue:'+i+'"><div class="mini" style="'+bg(t)+'"></div><div class="meta"><b>'+esc(t.title)+'</b><span>'+esc(t.artist)+'</span></div><button class="ib ic" data-menu="'+esc(t.id)+'" aria-label="More">'+I.more+'</button></div>';
 $('#bQueue').addEventListener('click',()=>$('#qp').classList.toggle('open'));
@@ -563,7 +586,7 @@ $('#npClose').addEventListener('click',()=>openNP(false));
 /* ---------- views ---------- */
 const main=$('#main');
 const card=(t,k,i)=>'<article class="card" tabindex="0" data-play="'+k+':'+i+'"><div class="cover" style="'+bg(t)+'"><button class="pbtn ic" tabindex="-1" aria-label="Play">'+I.play+'</button></div><h3>'+esc(t.title)+'</h3><p>'+esc(t.artist)+'</p>'+(t.why?'<p class="why">'+esc(t.why)+'</p>':'')+'</article>';
-const row=(t,k,i)=>'<div class="row'+(cur&&cur.id===t.id?' on':'')+'" data-play="'+k+':'+i+'"><span class="n">'+(i+1)+'</span><div class="mini" style="'+bg(t)+'"></div><div class="meta"><b>'+esc(t.title)+'</b><span>'+esc(t.artist)+(t.src==='itunes'&&!ytKey()?' \u00b7 30s preview':'')+'</span></div><span class="g">'+esc(t.genre)+'</span><button class="ib ic'+(liked(t.id)?' lk':'')+'" data-like="'+esc(t.id)+'" aria-label="Like">'+(liked(t.id)?I.heartF:I.heart)+'</button><span class="d">'+fmt(t.dur)+'</span><button class="ib ic" data-menu="'+esc(t.id)+'" aria-label="More">'+I.more+'</button></div>';
+const row=(t,k,i)=>'<div class="row'+(cur&&cur.id===t.id?' on':'')+'" data-play="'+k+':'+i+'"><span class="n">'+(i+1)+'</span><div class="mini" style="'+bg(t)+'"></div><div class="meta"><b>'+esc(t.title)+'</b><span>'+esc(t.artist)+(t.src==='itunes'&&!ytKey()?' \u00b7 30s preview':'')+'</span></div><span class="g">'+esc(t.genre)+'</span><button class="ib ic'+(liked(t.id)?' lk':'')+'" data-like="'+esc(t.id)+'" aria-label="Like">'+(liked(t.id)?I.heartF:I.heart)+'</button><span class="d">'+fmt(t.full||t.dur)+'</span><button class="ib ic" data-menu="'+esc(t.id)+'" aria-label="More">'+I.more+'</button></div>';
 const skel=n=>Array.from({length:n},()=>'<div class="sk"></div>').join('');
 const shelf=(title,id,extra)=>'<section class="shelf"><div class="shelf-h"><h2>'+esc(title)+'</h2>'+(extra||'')+'</div><div class="rail" id="'+id+'">'+skel(7)+'</div></section>';
 function fill(id,promise){
@@ -738,6 +761,34 @@ function route(){
 }
 window.addEventListener('hashchange',route);
 icons(document);sidePls();playState();route();
+
+/* ---------- session, background, install ---------- */
+function saveSession(){
+  if(!cur)return;
+  const i=Q.indexOf(cur),st=Math.max(0,i-5),arr=Q.slice(st,st+60);
+  store.set('session',{Q:arr,qi:Math.max(0,i-st),pos:lazyPos!==null?lazyPos:(curTime()||0)});
+}
+(function(){
+  const ss=store.get('session',null);
+  if(ss&&ss.Q&&ss.Q[ss.qi]){
+    Q=ss.Q;qi=ss.qi;cur=Q[qi];lazyPos=ss.pos||0;updateUI();
+    const d=cur.full||cur.dur||0;
+    $$('.tcur').forEach(e=>e.textContent=fmt(lazyPos));$$('.tdur').forEach(e=>e.textContent=fmt(d));
+    $$('.seek').forEach(x=>{x.value=d?lazyPos/d*1000:0;setP(x)});
+  }
+  window.addEventListener('pagehide',saveSession);
+  let was=false;
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){was=!isPaused();saveSession()}
+    else if(was&&eng==='yt'&&ytReady&&isPaused()){try{yt.playVideo()}catch(e){}}
+  });
+  setInterval(()=>{if(cur&&!isPaused())saveSession()},5000);
+  const np=$('#np');let y0=null,dy=0;
+  np.addEventListener('touchstart',e=>{if(np.scrollTop<=0&&!e.target.closest('input')){y0=e.touches[0].clientY;dy=0}},{passive:true});
+  np.addEventListener('touchmove',e=>{if(y0===null)return;dy=e.touches[0].clientY-y0;if(dy>0){np.style.transition='none';np.style.transform='translateY('+dy+'px)'}},{passive:true});
+  np.addEventListener('touchend',()=>{if(y0===null)return;np.style.transition='';np.style.transform='';if(dy>120)openNP(false);y0=null;dy=0});
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
 </script>
 </body>
 </html>
