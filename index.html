@@ -206,6 +206,17 @@ input[type=range]:hover::-moz-range-thumb{opacity:1}
 body.paused .row.on .n::before{animation-play-state:paused}
 @keyframes eq{0%,100%{background-size:3px 30%,3px 90%,3px 50%}50%{background-size:3px 100%,3px 40%,3px 80%}}
 @media (max-width:860px){.mprog{display:block;position:absolute;left:0;top:0;height:2px;width:var(--mp,0%);background:var(--acc);transition:width .3s linear}}
+#pocket{position:fixed;inset:0;z-index:50;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:14px;padding:24px 24px calc(40px + env(safe-area-inset-bottom));text-align:center;touch-action:none}
+#pocket[hidden]{display:none}
+.pk-top b{display:block;font:800 20px var(--display);color:#bbb}
+.pk-top span{color:#666}
+.pk-hint{color:#555;font-size:13px;max-width:34ch}
+.pk-btn{position:relative;overflow:hidden;padding:14px 28px;border-radius:99px;border:1px solid #333;color:#aaa;font-weight:600;min-width:210px;touch-action:none;user-select:none;-webkit-user-select:none}
+.pk-btn i{position:absolute;left:0;top:0;bottom:0;width:0;background:#333;transition:width 0s}
+.pk-btn.hold i{width:100%;transition:width .8s linear}
+.pk-btn span{position:relative}
+body.pocket{overflow:hidden}
+body.pocket #ytWrap{left:50%;top:22%;bottom:auto;transform:translateX(-50%);z-index:60;pointer-events:none}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
@@ -269,6 +280,7 @@ body.paused .row.on .n::before{animation-play-state:paused}
       <button class="ib ic" id="bNext2" aria-label="Next" data-i="next"></button>
       <button class="ib ic" id="bRep2" aria-label="Repeat" data-i="repeat"></button>
       <button class="ib likeBtn" aria-label="Like"></button>
+      <button class="ib ic" id="bPocket" aria-label="Pocket mode" title="Pocket mode" data-i="moon"></button>
     </div>
     <div class="upnext" id="upnext"></div>
   </div>
@@ -279,6 +291,11 @@ body.paused .row.on .n::before{animation-play-state:paused}
 <div id="toast" role="status"></div>
 <audio id="audio" preload="auto"></audio>
 <div id="ytWrap"><div id="ytp"></div></div>
+<div id="pocket" hidden>
+  <div class="pk-top"><b id="pkTitle"></b><span id="pkArtist"></span></div>
+  <div class="pk-hint">Screen stays on but dark. Touches are locked so nothing changes in your pocket.</div>
+  <button id="pkUnlock" class="pk-btn"><i></i><span>Hold to unlock</span></button>
+</div>
 
 <script>
 'use strict';
@@ -312,7 +329,8 @@ const I={
  library:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 4v16M10 4v16M15 6l4 14"/></svg>',
  insights:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20v-7M12 20V4M19 20v-10"/></svg>',
  expand:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>',
- down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'
+ down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+ moon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>'
 };
 const toastEl=$('#toast');let toastT;
 function toast(m){toastEl.textContent=m;toastEl.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>toastEl.classList.remove('on'),2600)}
@@ -403,7 +421,7 @@ async function recommend(){
 
 /* ---------- player ---------- */
 const au=$('#audio');
-let Q=[],qi=-1,cur=null,shuffle=false,rep=0,started=false,counted=false,eng='au',yt=null,ytReady=false,ytTimer=null,ytWarned=false,lazyPos=null,resumeAt=0;
+let Q=[],qi=-1,cur=null,shuffle=false,rep=0,started=false,counted=false,eng='au',yt=null,ytReady=false,ytTimer=null,ytWarned=false,lazyPos=null,resumeAt=0,matchToast=false;
 au.volume=store.get('vol',.8);$$('.vol').forEach(v=>{v.value=au.volume*100;setP(v)});
 function setP(inp){inp.style.setProperty('--p',(inp.value/inp.max*100)+'%')}
 const ytKey=()=>store.get('ytkey','');
@@ -446,12 +464,42 @@ function play(list,i){
   if(!list||!list[i])return;
   logEnd();Q=list.slice();qi=i;load();
 }
+const matchCache=new Map();
+const nrm=s=>String(s||'').toLowerCase().replace(/\(.*?\)|\[.*?\]/g,' ').replace(/\b(feat|ft)\b\.?.*$/,' ').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+const BADV=/\b(remix|cover|slowed|reverb|sped|speed|nightcore|bootleg|mashup|edit|flip|instrumental|karaoke|lofi|lo-fi|acoustic|live)\b/i;
+async function audiusMatch(t){
+  if(matchCache.has(t.id))return matchCache.get(t.id);
+  let m=null;
+  try{
+    const list=await search(t.title.replace(/\(.*?\)/g,' ').trim()+' '+t.artist.split(/[,&]/)[0].trim(),10);
+    const bt=nrm(t.title),arts=t.artist.toLowerCase().split(/[,&]|\bfeat\.?\b|\bft\.?\b/).map(x=>x.trim()).filter(x=>x.length>=3);
+    m=list.find(c=>{
+      if(nrm(c.title)!==bt)return false;
+      if(BADV.test(c.title)&&!BADV.test(t.title))return false;
+      const ca=c.artist.toLowerCase(),ct=c.title.toLowerCase();
+      if(!arts.some(a=>ca.includes(a)||(ca.length>=3&&a.includes(ca))||ct.includes(a)))return false;
+      if(t.full&&c.dur&&Math.abs(c.dur-t.full)/t.full>0.2)return false;
+      return true;
+    })||null;
+  }catch(e){}
+  matchCache.set(t.id,m);return m;
+}
 async function load(){
   const t=cur=Q[qi];if(!t)return;
   const startAt=resumeAt;resumeAt=0;lazyPos=null;
   started=true;counted=false;updateUI();
   stopYT();au.pause();
-  if(t.src==='itunes'&&ytKey()){
+  let srcUrl=null;
+  if(t.src==='itunes'&&store.get('prefAudius',true)){
+    const m=await audiusMatch(t);
+    if(cur!==t)return;
+    if(m){
+      t.alt=m;t.dur=m.dur||t.dur;srcUrl=API+'/tracks/'+m.id+'/stream?app_name='+APP;
+      t.why='Full version on Audius. Keeps playing with the screen off.';updateUI();
+      if(!matchToast){matchToast=true;toast('Full version found on Audius')}
+    }
+  }
+  if(!srcUrl&&t.src==='itunes'&&ytKey()){
     try{
       const vid=await ytResolve(t);
       if(cur!==t)return;
@@ -465,10 +513,10 @@ async function load(){
   }
   if(cur!==t)return;
   eng='au';
-  au.src=t.src==='itunes'?t.url:API+'/tracks/'+t.id+'/stream?app_name='+APP;
+  au.src=srcUrl||(t.src==='itunes'?t.url:API+'/tracks/'+t.id+'/stream?app_name='+APP);
   if(startAt>1)au.addEventListener('loadedmetadata',()=>{try{au.currentTime=Math.min(startAt,(au.duration||startAt)-1)}catch(e){}},{once:true});
   const p=au.play();if(p&&p.catch)p.catch(()=>{});
-  if(t.src==='itunes'&&!ytKey()&&!ytWarned){ytWarned=true;toast('30s preview. Add a YouTube key to hear full songs.')}
+  if(t.src==='itunes'&&!srcUrl&&!ytKey()&&!ytWarned){ytWarned=true;toast('30s preview. Add a YouTube key to hear full songs.')}
 }
 async function extendQueue(){
   try{
@@ -540,6 +588,7 @@ function updateUI(){
   $('#pArt').style.cssText=bg(t);$('#nArt').style.cssText=bg(t);$('#npBg').style.cssText=bg(t);
   $('#pTitle').textContent=t.title;$('#pArtist').textContent=t.artist;
   $('#nTitle').textContent=t.title;$('#nArtist').textContent=t.artist;
+  $('#pkTitle').textContent=t.title;$('#pkArtist').textContent=t.artist;
   const w=$('#nWhy');w.hidden=!t.why;w.textContent=t.why||'';
   document.title=t.title+' \u00b7 Aura';
   refreshLikes();playState();markRows();renderQueue();
@@ -704,7 +753,7 @@ function menuFor(t){
    S.pls.map(p=>'<button class="act" data-act="add" data-pl="'+p.id+'" data-id="'+esc(t.id)+'">Add to '+esc(p.name)+'</button>').join('')+
    '<button class="act" data-act="newpl" data-id="'+esc(t.id)+'">New playlist\u2026</button>';
 }
-const ytSheet=()=>'<h3>Play full songs</h3><div class="by">Catalog songs play 30 seconds by default. A free YouTube key lets Aura play the whole song in a small video window.</div><div style="color:var(--mute);font-size:14px;line-height:1.6;margin-bottom:8px">1. Open console.cloud.google.com and create a project.<br>2. Enable \u201cYouTube Data API v3\u201d.<br>3. Credentials, then Create API key. Restrict it to YouTube Data API v3 and to your site address.<br>4. Paste it below. It stays in this browser only.</div><input id="ytKey" placeholder="YouTube API key" value="'+esc(ytKey())+'" aria-label="YouTube API key"><button class="cta" data-act="ytsave">Save</button> '+(ytKey()?'<button class="ghost" data-act="ytclear">Remove key</button>':'')+'<div style="color:var(--mute);font-size:12.5px;margin-top:12px">The free quota covers about 100 song lookups a day. Playback uses YouTube\u2019s official player, so its video window and ads can appear.</div>';
+const ytSheet=()=>'<h3>Play full songs</h3><div class="by">Catalog songs play 30 seconds by default. A free YouTube key lets Aura play the whole song in a small video window.</div><div style="color:var(--mute);font-size:14px;line-height:1.6;margin-bottom:8px">1. Open console.cloud.google.com and create a project.<br>2. Enable \u201cYouTube Data API v3\u201d.<br>3. Credentials, then Create API key. Restrict it to YouTube Data API v3 and to your site address.<br>4. Paste it below. It stays in this browser only.</div><input id="ytKey" placeholder="YouTube API key" value="'+esc(ytKey())+'" aria-label="YouTube API key"><button class="cta" data-act="ytsave">Save</button> '+(ytKey()?'<button class="ghost" data-act="ytclear">Remove key</button>':'')+'<div style="color:var(--mute);font-size:12.5px;margin-top:12px">The free quota covers about 100 song lookups a day. Playback uses YouTube\u2019s official player, so its video window and ads can appear.</div><button class="act" data-act="pref" style="margin-top:10px">Try Audius first (full songs that play with the screen off): '+(store.get('prefAudius',true)?'ON':'OFF')+'</button>';
 sheet.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]');if(!b)return;
   const t=TR.get(b.dataset.id),a=b.dataset.act;
@@ -714,6 +763,7 @@ sheet.addEventListener('click',e=>{
   else if(a==='add'){const p=S.pls.find(x=>x.id===b.dataset.pl);if(p&&!p.tracks.some(x=>x.id===t.id)){p.tracks.push(t);save();toast('Added to '+p.name)}else toast('Already in '+(p?p.name:'playlist'));closeSheet()}
   else if(a==='ytsave'){const k=$('#ytKey').value.trim();if(k){store.set('ytkey',k);ytWarned=false;toast('Full songs unlocked');closeSheet()}}
   else if(a==='ytclear'){store.set('ytkey','');stopYT();toast('Key removed');closeSheet()}
+  else if(a==='pref'){store.set('prefAudius',!store.get('prefAudius',true));sheetIn.innerHTML=ytSheet()}
   else if(a==='newpl'){sheetIn.innerHTML=sheetNewPl(t);$('#plName').focus()}
   else if(a==='mk'){
     const n=$('#plName').value.trim();if(!n)return;
@@ -789,6 +839,33 @@ function saveSession(){
   np.addEventListener('touchend',()=>{if(y0===null)return;np.style.transition='';np.style.transform='';if(dy>120)openNP(false);y0=null;dy=0});
   if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
+
+/* ---------- pocket mode ---------- */
+let wl=null,pocketOn=false;
+async function lockScreen(){
+  if(!('wakeLock' in navigator))return false;
+  try{wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null});return true}catch(e){return false}
+}
+async function pocket(on){
+  if(on){
+    const ok=await lockScreen();
+    if(!ok){toast('This browser can\u2019t keep the screen on. Use Chrome on Android or Safari 16.4+.');return}
+    pocketOn=true;document.body.classList.add('pocket');$('#pocket').hidden=false;
+    openNP(false);$('#qp').classList.remove('open');
+  }else{
+    pocketOn=false;document.body.classList.remove('pocket');$('#pocket').hidden=true;
+    if(wl){try{wl.release()}catch(e){}wl=null}
+  }
+}
+$('#bPocket').addEventListener('click',()=>{if(!cur){toast('Play a song first');return}pocket(true)});
+(function(){
+  const b=$('#pkUnlock');let tm=null;
+  const stop=()=>{clearTimeout(tm);b.classList.remove('hold')};
+  b.addEventListener('pointerdown',e=>{e.preventDefault();b.classList.add('hold');tm=setTimeout(()=>{b.classList.remove('hold');pocket(false)},800)});
+  ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,stop));
+})();
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&pocketOn&&!wl)lockScreen()});
+icons(document);
 </script>
 </body>
 </html>
