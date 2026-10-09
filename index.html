@@ -170,9 +170,13 @@ input[type=range]:hover::-moz-range-thumb{opacity:1}
 .act:hover{background:rgba(255,255,255,.07)}
 .sheet-in input{width:100%;background:var(--plum);border:1px solid var(--line);color:var(--bone);border-radius:10px;padding:11px 14px;font:inherit;margin:8px 0}
 .sep{height:1px;background:var(--line);margin:8px 0}
-#ytWrap{position:fixed;left:16px;bottom:108px;width:200px;height:200px;border-radius:14px;overflow:hidden;z-index:25;box-shadow:0 14px 40px rgba(0,0,0,.6);visibility:hidden;opacity:0;transition:opacity .3s;background:#000}
+#ytWrap{position:fixed;right:16px;bottom:108px;width:200px;height:222px;display:flex;flex-direction:column;border-radius:14px;overflow:hidden;z-index:25;box-shadow:0 14px 40px rgba(0,0,0,.6);visibility:hidden;opacity:0;transition:opacity .3s;background:#000}
 #ytWrap.on{visibility:visible;opacity:1}
-#ytWrap iframe{width:100%;height:100%;display:block}
+#ytWrap iframe{width:100%;height:200px;flex:none;display:block}
+#ytHandle{height:22px;flex:none;background:#241f33;display:grid;place-items:center;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+#ytHandle i{width:38px;height:4px;border-radius:9px;background:#7a7196}
+#ytWrap.drag{box-shadow:0 20px 50px rgba(0,0,0,.75)}
+#ytWrap.drag #ytHandle{cursor:grabbing}
 .banner{background:var(--plum2);border-radius:14px;padding:12px 16px;margin-top:22px;color:var(--mute);max-width:640px}
 .sh{margin-top:28px}
 #toast{position:fixed;left:50%;bottom:110px;transform:translate(-50%,20px);background:var(--bone);color:var(--ink);padding:11px 20px;border-radius:99px;font-weight:600;opacity:0;pointer-events:none;transition:.3s;z-index:40;max-width:90vw;text-align:center}
@@ -196,7 +200,7 @@ input[type=range]:hover::-moz-range-thumb{opacity:1}
   #np{grid-template-columns:1fr;padding-top:70px;align-content:start}
   #qp{bottom:130px}
   #toast{bottom:150px}
-  #ytWrap{bottom:150px;left:8px}
+  #ytWrap{top:64px;right:8px;bottom:auto}
   .bar{grid-template-columns:96px 1fr 40px}
 }
 .player{position:relative}
@@ -216,7 +220,7 @@ body.paused .row.on .n::before{animation-play-state:paused}
 .pk-btn.hold i{width:100%;transition:width .8s linear}
 .pk-btn span{position:relative}
 body.pocket{overflow:hidden}
-body.pocket #ytWrap{left:50%;top:22%;bottom:auto;transform:translateX(-50%);z-index:60;pointer-events:none}
+body.pocket #ytWrap{left:50%!important;right:auto!important;top:22%!important;bottom:auto!important;transform:translateX(-50%);z-index:60;pointer-events:none}
 .arow{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:26px 22px;margin-top:22px}
 .arow.h{grid-auto-flow:column;grid-auto-columns:120px;grid-template-columns:none;overflow-x:auto;gap:18px;margin-top:0;padding-bottom:8px}
 .artist{text-align:center;cursor:pointer;position:relative;min-width:0}
@@ -330,7 +334,7 @@ body.pocket #ytWrap{left:50%;top:22%;bottom:auto;transform:translateX(-50%);z-in
 <div id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 <div id="toast" role="status"></div>
 <audio id="audio" preload="auto"></audio>
-<div id="ytWrap"><div id="ytp"></div></div>
+<div id="ytWrap"><div id="ytHandle" title="Drag to move. Double-tap to reset." aria-label="Move video window"><i></i></div><div id="ytp"></div></div>
 <div id="pocket" hidden>
   <div class="pk-top"><b id="pkTitle"></b><span id="pkArtist"></span></div>
   <div class="pk-hint">Screen stays on but dark. Touches are locked so nothing changes in your pocket.</div>
@@ -548,6 +552,7 @@ async function load(){
       if(vid){
         await ytInit();if(cur!==t)return;
         eng='yt';$('#ytWrap').classList.add('on');
+        if(!store.get('ytHint',false)){store.set('ytHint',true);toast('Drag the bar on the video to move it')}
         yt.loadVideoById(vid,startAt);yt.setVolume(au.volume*100);
         clearInterval(ytTimer);ytTimer=setInterval(tick,300);playState();return;
       }
@@ -1050,6 +1055,32 @@ const nameSheet=()=>'<h3>What should Aura call you?</h3><input id="nm" placehold
   document.addEventListener('keydown',finish,{once:true});
   setTimeout(finish,DUR);
   raf=requestAnimationFrame(frame);
+})();
+
+/* ---------- movable video window ---------- */
+(function(){
+  const wrap=$('#ytWrap'),h=$('#ytHandle');
+  let sx=0,sy=0,ox=0,oy=0,drag=false;
+  function apply(x,y){
+    const W=window.innerWidth,H=window.innerHeight,w=wrap.offsetWidth||200,hh=wrap.offsetHeight||222;
+    x=Math.max(4,Math.min(W-w-4,x));y=Math.max(4,Math.min(H-hh-4,y));
+    wrap.style.left=x+'px';wrap.style.top=y+'px';wrap.style.right='auto';wrap.style.bottom='auto';
+  }
+  h.addEventListener('pointerdown',e=>{
+    drag=true;const r=wrap.getBoundingClientRect();ox=r.left;oy=r.top;sx=e.clientX;sy=e.clientY;
+    try{h.setPointerCapture(e.pointerId)}catch(x){}
+    wrap.classList.add('drag');e.preventDefault();
+  });
+  h.addEventListener('pointermove',e=>{if(drag)apply(ox+e.clientX-sx,oy+e.clientY-sy)});
+  const end=()=>{
+    if(!drag)return;drag=false;wrap.classList.remove('drag');
+    const r=wrap.getBoundingClientRect();
+    store.set('ytpos',{x:r.left/window.innerWidth,y:r.top/window.innerHeight});
+  };
+  h.addEventListener('pointerup',end);h.addEventListener('pointercancel',end);
+  h.addEventListener('dblclick',()=>{store.set('ytpos',null);wrap.style.left=wrap.style.top=wrap.style.right=wrap.style.bottom='';toast('Video window reset')});
+  function restore(){const p=store.get('ytpos',null);if(p&&typeof p.x==='number')apply(p.x*window.innerWidth,p.y*window.innerHeight)}
+  restore();window.addEventListener('resize',restore);
 })();
 </script>
 </body>
