@@ -217,6 +217,19 @@ body.paused .row.on .n::before{animation-play-state:paused}
 .pk-btn span{position:relative}
 body.pocket{overflow:hidden}
 body.pocket #ytWrap{left:50%;top:22%;bottom:auto;transform:translateX(-50%);z-index:60;pointer-events:none}
+.arow{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:26px 22px;margin-top:22px}
+.arow.h{grid-auto-flow:column;grid-auto-columns:120px;grid-template-columns:none;overflow-x:auto;gap:18px;margin-top:0;padding-bottom:8px}
+.artist{text-align:center;cursor:pointer;position:relative;min-width:0}
+.avatar{width:100%;aspect-ratio:1;border-radius:50%;background-size:cover;background-position:center;display:grid;place-items:center;font:800 34px var(--display);color:rgba(255,255,255,.85);box-shadow:0 10px 28px rgba(0,0,0,.4);transition:transform .2s}
+.artist:hover .avatar{transform:scale(1.04)}
+.artist b{display:block;margin-top:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.artist .x{position:absolute;top:0;right:6px;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;font-size:16px;line-height:28px;opacity:0;transition:opacity .15s;z-index:2}
+.artist:hover .x,.artist .x:focus-visible{opacity:1}
+@media (hover:none){.artist .x{opacity:.85}}
+.avatar.big{width:min(200px,40vw);flex:none}
+.tiles.ch{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.tiles.ch .tile{height:130px;font-size:22px}
+.tile small{display:block;font:500 12.5px/1.3 var(--body);margin-top:6px;opacity:.85;position:relative;z-index:1}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
@@ -226,6 +239,8 @@ body.pocket #ytWrap{left:50%;top:22%;bottom:auto;transform:translateX(-50%);z-in
     <div class="logo"><i></i>Aura</div>
     <button class="nav" data-go="#/home"><span class="ic" data-i="home"></span>Home</button>
     <button class="nav" data-go="#/search"><span class="ic" data-i="search"></span>Search</button>
+    <button class="nav" data-go="#/artists"><span class="ic" data-i="user"></span>Artists</button>
+    <button class="nav" data-go="#/charts"><span class="ic" data-i="trophy"></span>Charts</button>
     <button class="nav" data-go="#/library"><span class="ic" data-i="library"></span>Your library</button>
     <button class="nav" data-go="#/insights"><span class="ic" data-i="insights"></span>Your sound</button>
     <button class="nav" data-yt><span class="ic" data-i="vol"></span>Full songs</button>
@@ -259,6 +274,8 @@ body.pocket #ytWrap{left:50%;top:22%;bottom:auto;transform:translateX(-50%);z-in
   <nav class="tabs">
     <button class="nav" data-go="#/home" style="flex:1"><span class="ic" data-i="home"></span>Home</button>
     <button class="nav" data-go="#/search" style="flex:1"><span class="ic" data-i="search"></span>Search</button>
+    <button class="nav" data-go="#/artists" style="flex:1"><span class="ic" data-i="user"></span>Artists</button>
+    <button class="nav" data-go="#/charts" style="flex:1"><span class="ic" data-i="trophy"></span>Charts</button>
     <button class="nav" data-go="#/library" style="flex:1"><span class="ic" data-i="library"></span>Library</button>
     <button class="nav" data-go="#/insights" style="flex:1"><span class="ic" data-i="insights"></span>Sound</button>
   </nav>
@@ -330,7 +347,9 @@ const I={
  insights:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20v-7M12 20V4M19 20v-10"/></svg>',
  expand:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>',
  down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
- moon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>'
+ moon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>',
+ user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>',
+ trophy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0zM17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3"/></svg>'
 };
 const toastEl=$('#toast');let toastT;
 function toast(m){toastEl.textContent=m;toastEl.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>toastEl.classList.remove('on'),2600)}
@@ -653,11 +672,13 @@ function home(){
   const tg=topKeys(S.taste.genres,2);
   main.innerHTML='<div class="page"><h1>'+greet()+'</h1><p class="sub">'+(hasTaste()?'Your mix leans toward '+tg.join(' and ')+'. It shifts as you listen and skip.':'Play a few songs and Aura starts learning what you like.')+'</p>'+
    '<div class="chips">'+MOODS.map(m=>'<button class="chip" data-go="#/genre/'+encodeURIComponent(m[1])+'">'+m[0]+'</button>').join('')+'</div>'+
+   artistShelf()+chartShelf()+
    shelf('Made for you','recs','<button class="link" id="playRecs">Play all</button>')+
    (S.recent.length?'<section class="shelf"><div class="shelf-h"><h2>Jump back in</h2></div><div class="rail" id="recent"></div></section>':'')+
    (tg[0]?shelf('More '+tg[0],'mix1'):'')+(tg[1]?shelf('More '+tg[1],'mix2'):'')+
    shelf('Trending now','trend')+
    '<section class="shelf"><div class="shelf-h"><h2>Browse genres</h2></div><div class="tiles">'+tiles(GENRES.slice(0,12))+'</div></section></div>';
+  favArtists().forEach(loadArtistArt);
   const rp=fill('recs',recommend());
   $('#playRecs').onclick=()=>LISTS.recs&&LISTS.recs.length&&play(LISTS.recs,0);
   if(S.recent.length){LISTS.recent=S.recent;$('#recent').innerHTML=S.recent.map((t,i)=>card(t,'recent',i)).join('')}
@@ -666,6 +687,89 @@ function home(){
   fill('trend',trending('',24,'week'));
 }
 const tiles=gs=>gs.map(g=>'<button class="tile" data-go="#/genre/'+encodeURIComponent(g)+'" style="background:linear-gradient(135deg,hsl('+hue(g)+' 65% 42%),hsl('+((hue(g)+50)%360)+' 60% 28%))">'+esc(g)+'</button>').join('');
+
+/* ---------- artists + charts ---------- */
+const DEFAULT_ARTISTS=['Coldplay','Karan Aujla','AP Dhillon','Travis Scott','Anyma'];
+const favArtists=()=>store.get('artists',DEFAULT_ARTISTS);
+const CHARTS=[
+ {k:'bollywood',t:'Top 50 Bollywood',s:'Most played Bollywood songs in India',u:'https://itunes.apple.com/in/rss/topsongs/limit=50/genre=1263/json',h:12},
+ {k:'india',t:'Top 50 India',s:'What India is playing right now, all languages',u:'https://itunes.apple.com/in/rss/topsongs/limit=50/json',h:265},
+ {k:'hollywood',t:'Top 50 Hollywood',s:'English-language hits on the US chart',u:'https://itunes.apple.com/us/rss/topsongs/limit=50/json',h:200},
+ {k:'hiphop',t:'Top 50 Hip-Hop',s:'Most played hip-hop and rap in the US',u:'https://itunes.apple.com/us/rss/topsongs/limit=50/genre=18/json',h:35}
+];
+const dataCache=new Map();
+const shuf=a=>{const b=a.slice();for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b};
+function normE(e){
+  const lk=(e.link||[]).find(l=>l.attributes&&String(l.attributes.type||'').indexOf('audio')===0);
+  if(!lk)return null;
+  const imgs=e['im:image']||[],img=imgs.length?imgs[imgs.length-1].label:'',id='i'+e.id.attributes['im:id'];
+  const o={id,title:e['im:name'].label,artist:e['im:artist'].label,genre:(e.category&&e.category.attributes.label)||'Other',mood:'',dur:30,art:img.replace(/\d+x\d+bb/,'600x600bb'),plays:0,src:'itunes',url:lk.attributes.href};
+  TR.set(id,Object.assign(TR.get(id)||{},o));return TR.get(id);
+}
+async function chartTracks(c){
+  if(dataCache.has(c.k))return dataCache.get(c.k);
+  const r=await fetch(c.u);if(!r.ok)throw new Error('http');
+  const j=await r.json(),list=((j.feed&&j.feed.entry)||[]).map(normE).filter(Boolean);
+  dataCache.set(c.k,list);return list;
+}
+async function artistTracks(name){
+  const key='a:'+name.toLowerCase();
+  if(dataCache.has(key))return dataCache.get(key);
+  const url='https://itunes.apple.com/search?media=music&entity=song&attribute=artistTerm&limit=200&country='+COUNTRY+'&term='+encodeURIComponent(name);
+  let j;try{const r=await fetch(url);if(!r.ok)throw new Error('http');j=await r.json()}catch(e){j=await jsonp(url)}
+  const n=name.toLowerCase(),seen=new Set();
+  const list=(j.results||[]).filter(x=>x.previewUrl&&String(x.artistName||'').toLowerCase().includes(n)).map(normI).filter(t=>{const k=nrm(t.title)+'|'+t.artist.toLowerCase();if(seen.has(k))return false;seen.add(k);return true});
+  dataCache.set(key,list);return list;
+}
+const initials=n=>n.split(/\s+/).map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+const avG=a=>'linear-gradient(135deg,hsl('+hue(a)+' 60% 40%),hsl('+((hue(a)+60)%360)+' 60% 24%))';
+const artistTile=(a,rm)=>'<div class="artist" tabindex="0" data-go="#/artist/'+encodeURIComponent(a)+'">'+(rm?'<button class="x" data-delartist="'+esc(a)+'" aria-label="Remove '+esc(a)+'">\u00d7</button>':'')+'<div class="avatar" data-art="'+esc(a)+'" style="background-image:'+avG(a)+'">'+esc(initials(a))+'</div><b>'+esc(a)+'</b></div>';
+function loadArtistArt(a){
+  artistTracks(a).then(l=>{
+    const t=l.find(x=>x.art);if(!t)return;
+    $$('.avatar').forEach(el=>{if(el.dataset.art===a){el.style.backgroundImage="url('"+t.art+"'),"+avG(a);el.style.backgroundSize='cover';el.textContent=''}});
+  }).catch(()=>{});
+}
+const artistShelf=()=>'<section class="shelf"><div class="shelf-h"><h2>Your artists</h2><button class="link" data-go="#/artists">See all</button></div><div class="arow h">'+favArtists().map(a=>artistTile(a,false)).join('')+'</div></section>';
+const chartTile=c=>'<button class="tile" data-go="#/chart/'+c.k+'" style="background:linear-gradient(135deg,hsl('+c.h+' 65% 42%),hsl('+((c.h+50)%360)+' 60% 26%))">'+esc(c.t)+'<small>'+esc(c.s)+'</small></button>';
+const chartShelf=()=>'<section class="shelf"><div class="shelf-h"><h2>Charts</h2><button class="link" data-go="#/charts">See all</button></div><div class="tiles ch" style="margin-top:0">'+CHARTS.slice(0,3).map(chartTile).join('')+'</div></section>';
+function artistsView(){
+  const A=favArtists();
+  main.innerHTML='<div class="page"><h1>Your artists</h1><p class="sub">Tap an artist to see all their songs. Add anyone you like.</p><div class="arow">'+A.map(a=>artistTile(a,true)).join('')+'<button class="artist" data-addartist><div class="avatar" style="background:rgba(255,255,255,.07)">+</div><b>Add artist</b></button></div></div>';
+  A.forEach(loadArtistArt);
+}
+async function artistView(name){
+  const mine=favArtists().some(x=>x.toLowerCase()===name.toLowerCase());
+  main.innerHTML='<div class="page"><div class="head"><div class="avatar big" id="aAv" style="background-image:'+avG(name)+'">'+esc(initials(name))+'</div><div><h1>'+esc(name)+'</h1><p class="sub" id="aSub">Loading songs...</p></div></div><div style="margin-top:22px;display:flex;gap:10px;flex-wrap:wrap"><button class="cta" id="aPlay">Play</button><button class="ghost" id="aShuf">Shuffle</button><button class="ghost" id="aFav">'+(mine?'Remove from your artists':'Add to your artists')+'</button></div><div id="al" class="rows">'+skel(1)+'</div></div>';
+  $('#aFav').onclick=()=>{let A=favArtists();const has=A.some(x=>x.toLowerCase()===name.toLowerCase());A=has?A.filter(x=>x.toLowerCase()!==name.toLowerCase()):A.concat([name]);store.set('artists',A);$('#aFav').textContent=has?'Add to your artists':'Remove from your artists';toast(has?'Removed':'Added to your artists')};
+  try{
+    const list=await artistTracks(name);
+    if(!document.getElementById('al'))return;
+    LISTS.al=list;
+    const top=list.find(x=>x.art);
+    if(top){const av=$('#aAv');av.style.backgroundImage="url('"+top.art+"'),"+avG(name);av.style.backgroundSize='cover';av.textContent=''}
+    $('#aSub').textContent=list.length?list.length+' songs':'No songs found';
+    $('#al').innerHTML=list.length?list.map((t,i)=>row(t,'al',i)).join(''):'<div class="empty"><h2>Nothing found for \u201c'+esc(name)+'\u201d</h2><p>Check the spelling or try the search page.</p></div>';
+    $('#aPlay').onclick=()=>list.length&&play(list,0);
+    $('#aShuf').onclick=()=>list.length&&play(shuf(list),0);
+  }catch(e){const el=document.getElementById('al');if(el)el.innerHTML='<div class="err">Couldn\u2019t load songs. Check your connection and try again.</div>'}
+}
+function chartsView(){
+  main.innerHTML='<div class="page"><h1>Charts</h1><p class="sub">Live charts from Apple Music. Tap one and play the whole list.</p><div class="tiles ch">'+CHARTS.map(chartTile).join('')+'</div><p class="sub" style="margin-top:24px">Instagram does not publish a song chart, so there is no Instagram list here.</p></div>';
+}
+async function chartView(k){
+  const c=CHARTS.find(x=>x.k===k);
+  if(!c){location.hash='#/charts';return}
+  main.innerHTML='<div class="page"><h1>'+esc(c.t)+'</h1><p class="sub">'+esc(c.s)+'</p><div style="margin-top:18px;display:flex;gap:10px"><button class="cta" id="cPlay">Play</button><button class="ghost" id="cShuf">Shuffle</button></div><div id="cl" class="rows">'+skel(1)+'</div></div>';
+  try{
+    const list=await chartTracks(c);
+    if(!document.getElementById('cl'))return;
+    LISTS.cl=list;
+    $('#cl').innerHTML=list.length?list.map((t,i)=>row(t,'cl',i)).join(''):'<div class="err">This chart is empty right now.</div>';
+    $('#cPlay').onclick=()=>list.length&&play(list,0);
+    $('#cShuf').onclick=()=>list.length&&play(shuf(list),0);
+  }catch(e){const el=document.getElementById('cl');if(el)el.innerHTML='<div class="err">Couldn\u2019t load this chart. Check your connection and try again.</div>'}
+}
 
 let searchT;
 function searchView(){
@@ -764,6 +868,7 @@ sheet.addEventListener('click',e=>{
   else if(a==='ytsave'){const k=$('#ytKey').value.trim();if(k){store.set('ytkey',k);ytWarned=false;toast('Full songs unlocked');closeSheet()}}
   else if(a==='ytclear'){store.set('ytkey','');stopYT();toast('Key removed');closeSheet()}
   else if(a==='pref'){store.set('prefAudius',!store.get('prefAudius',true));sheetIn.innerHTML=ytSheet()}
+  else if(a==='addartist'){const v=($('#newArtist').value||'').trim();if(v){const A=favArtists();if(!A.some(x=>x.toLowerCase()===v.toLowerCase())){A.push(v);store.set('artists',A)}closeSheet();toast('Added '+v);route()}}
   else if(a==='newpl'){sheetIn.innerHTML=sheetNewPl(t);$('#plName').focus()}
   else if(a==='mk'){
     const n=$('#plName').value.trim();if(!n)return;
@@ -778,6 +883,9 @@ document.addEventListener('click',e=>{
   if(lk){e.stopPropagation();toggleLike(TR.get(lk.dataset.like));return}
   const mn=e.target.closest('[data-menu]');
   if(mn){e.stopPropagation();const t=TR.get(mn.dataset.menu);if(t)openSheet(menuFor(t));return}
+  const da=e.target.closest('[data-delartist]');
+  if(da){e.stopPropagation();const n=da.dataset.delartist;store.set('artists',favArtists().filter(x=>x!==n));toast('Removed '+n);route();return}
+  if(e.target.closest('[data-addartist]')){openSheet('<h3>Add an artist</h3><input id="newArtist" placeholder="Artist name" maxlength="60" aria-label="Artist name"><button class="cta" data-act="addartist">Add</button>');setTimeout(()=>{const i=$('#newArtist');if(i)i.focus()},50);return}
   if(e.target.closest('[data-yt]')){openSheet(ytSheet());return}
   if(e.target.closest('[data-open]')){openNP(true);return}
   const go=e.target.closest('[data-go]');
@@ -801,10 +909,10 @@ function sidePls(){$('#sidePls').innerHTML=S.pls.map(p=>'<button class="plink" d
 function icons(el){$$('[data-i]',el).forEach(n=>{if(!n.innerHTML.trim())n.innerHTML=I[n.dataset.i]})}
 function route(){
   const parts=location.hash.replace(/^#\/?/,'').split('/'),name=parts[0]||'home',arg=decodeURIComponent(parts[1]||'');
-  $$('.nav').forEach(n=>n.classList.toggle('on',n.dataset.go==='#/'+(name==='genre'||name==='liked'||name==='playlist'?(name==='genre'?'search':'library'):name)));
+  $$('.nav').forEach(n=>n.classList.toggle('on',n.dataset.go==='#/'+(({genre:'search',liked:'library',playlist:'library',artist:'artists',chart:'charts'})[name]||name)));
   main.scrollTop=0;
   ({home,search:searchView,library,liked:likedView,insights}[name]||(()=>{
-    if(name==='genre')genreView(arg);else if(name==='playlist')playlistView(arg);else home();
+    if(name==='genre')genreView(arg);else if(name==='playlist')playlistView(arg);else if(name==='artists')artistsView();else if(name==='artist')artistView(arg);else if(name==='charts')chartsView();else if(name==='chart')chartView(arg);else home();
   }))(arg);
   icons(main);
   markRows();
