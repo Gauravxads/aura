@@ -230,10 +230,33 @@ body.pocket #ytWrap{left:50%;top:22%;bottom:auto;transform:translateX(-50%);z-in
 .tiles.ch{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
 .tiles.ch .tile{height:130px;font-size:22px}
 .tile small{display:block;font:500 12.5px/1.3 var(--body);margin-top:6px;opacity:.85;position:relative;z-index:1}
+#intro{position:fixed;inset:0;z-index:100;background:radial-gradient(900px 600px at 50% 36%,#2a1650 0%,#14111c 64%);overflow:hidden;transition:opacity .7s ease,transform .7s ease;animation:introFail .01s 7s forwards}
+#intro.out{opacity:0;transform:scale(1.08);pointer-events:none}
+@keyframes introFail{to{opacity:0;visibility:hidden;pointer-events:none}}
+#introCv{position:absolute;inset:0;width:100%;height:100%}
+.in-center{position:absolute;left:0;right:0;top:57%;text-align:center;padding:0 16px}
+.in-word{font:800 clamp(64px,15vw,150px)/1 var(--display);letter-spacing:-.04em;display:flex;justify-content:center}
+.in-word span{display:inline-block;opacity:0;transform:translateY(40px) scale(.9);filter:blur(10px);animation:inLetter .7s cubic-bezier(.2,.9,.2,1) forwards}
+.in-word span:nth-child(1){animation-delay:.55s}
+.in-word span:nth-child(2){animation-delay:.65s}
+.in-word span:nth-child(3){animation-delay:.75s}
+.in-word span:nth-child(4){animation-delay:.85s}
+@keyframes inLetter{to{opacity:1;transform:none;filter:none}}
+.in-hi{margin-top:16px;font:600 clamp(18px,3.4vw,28px) var(--body);color:#e9dfff;opacity:0;animation:inFade .7s 1.5s forwards}
+.in-art{margin:12px auto 0;display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:center;max-width:min(92vw,640px);color:#a99ec7;font-size:14px}
+.in-art span{opacity:0;animation:inFade .5s forwards}
+@keyframes inFade{to{opacity:1}}
+.in-skip{position:absolute;bottom:calc(26px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);color:#6f6788;font-size:13px;padding:8px 14px;border-radius:99px;opacity:0;animation:inFade .5s 1.2s forwards}
+@media (prefers-reduced-motion:reduce){#intro *{animation-duration:.01s!important;animation-delay:0s!important}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
+<div id="intro">
+  <canvas id="introCv"></canvas>
+  <div class="in-center"><div class="in-word"><span>A</span><span>u</span><span>r</span><span>a</span></div><div class="in-hi" id="inHi"></div><div class="in-art" id="inArt"></div></div>
+  <button class="in-skip" id="inSkip">Tap to skip</button>
+</div>
 <div id="app">
   <aside class="side">
     <div class="logo"><i></i>Aura</div>
@@ -670,7 +693,7 @@ const greet=()=>{const h=new Date().getHours();return h<5?'Still up?':h<12?'Good
 
 function home(){
   const tg=topKeys(S.taste.genres,2);
-  main.innerHTML='<div class="page"><h1>'+greet()+'</h1><p class="sub">'+(hasTaste()?'Your mix leans toward '+tg.join(' and ')+'. It shifts as you listen and skip.':'Play a few songs and Aura starts learning what you like.')+'</p>'+
+  main.innerHTML='<div class="page"><h1 data-name title="Tap to change your name" style="cursor:pointer">'+greet()+(store.get('name','Gaurav')?', '+esc(store.get('name','Gaurav')):'')+'</h1><p class="sub">'+(hasTaste()?'Your mix leans toward '+tg.join(' and ')+'. It shifts as you listen and skip.':'Play a few songs and Aura starts learning what you like.')+'</p>'+
    '<div class="chips">'+MOODS.map(m=>'<button class="chip" data-go="#/genre/'+encodeURIComponent(m[1])+'">'+m[0]+'</button>').join('')+'</div>'+
    artistShelf()+chartShelf()+
    shelf('Made for you','recs','<button class="link" id="playRecs">Play all</button>')+
@@ -857,7 +880,7 @@ function menuFor(t){
    S.pls.map(p=>'<button class="act" data-act="add" data-pl="'+p.id+'" data-id="'+esc(t.id)+'">Add to '+esc(p.name)+'</button>').join('')+
    '<button class="act" data-act="newpl" data-id="'+esc(t.id)+'">New playlist\u2026</button>';
 }
-const ytSheet=()=>'<h3>Play full songs</h3><div class="by">Catalog songs play 30 seconds by default. A free YouTube key lets Aura play the whole song in a small video window.</div><div style="color:var(--mute);font-size:14px;line-height:1.6;margin-bottom:8px">1. Open console.cloud.google.com and create a project.<br>2. Enable \u201cYouTube Data API v3\u201d.<br>3. Credentials, then Create API key. Restrict it to YouTube Data API v3 and to your site address.<br>4. Paste it below. It stays in this browser only.</div><input id="ytKey" placeholder="YouTube API key" value="'+esc(ytKey())+'" aria-label="YouTube API key"><button class="cta" data-act="ytsave">Save</button> '+(ytKey()?'<button class="ghost" data-act="ytclear">Remove key</button>':'')+'<div style="color:var(--mute);font-size:12.5px;margin-top:12px">The free quota covers about 100 song lookups a day. Playback uses YouTube\u2019s official player, so its video window and ads can appear.</div><button class="act" data-act="pref" style="margin-top:10px">Try Audius first (full songs that play with the screen off): '+(store.get('prefAudius',true)?'ON':'OFF')+'</button>';
+const ytSheet=()=>'<h3>Play full songs</h3><div class="by">Catalog songs play 30 seconds by default. A free YouTube key lets Aura play the whole song in a small video window.</div><div style="color:var(--mute);font-size:14px;line-height:1.6;margin-bottom:8px">1. Open console.cloud.google.com and create a project.<br>2. Enable \u201cYouTube Data API v3\u201d.<br>3. Credentials, then Create API key. Restrict it to YouTube Data API v3 and to your site address.<br>4. Paste it below. It stays in this browser only.</div><input id="ytKey" placeholder="YouTube API key" value="'+esc(ytKey())+'" aria-label="YouTube API key"><button class="cta" data-act="ytsave">Save</button> '+(ytKey()?'<button class="ghost" data-act="ytclear">Remove key</button>':'')+'<div style="color:var(--mute);font-size:12.5px;margin-top:12px">The free quota covers about 100 song lookups a day. Playback uses YouTube\u2019s official player, so its video window and ads can appear.</div><button class="act" data-act="pref" style="margin-top:10px">Try Audius first (full songs that play with the screen off): '+(store.get('prefAudius',true)?'ON':'OFF')+'</button><button class="act" data-act="name">Your name: '+esc(store.get('name','Gaurav')||'none')+' (tap to change)</button>';
 sheet.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]');if(!b)return;
   const t=TR.get(b.dataset.id),a=b.dataset.act;
@@ -868,6 +891,8 @@ sheet.addEventListener('click',e=>{
   else if(a==='ytsave'){const k=$('#ytKey').value.trim();if(k){store.set('ytkey',k);ytWarned=false;toast('Full songs unlocked');closeSheet()}}
   else if(a==='ytclear'){store.set('ytkey','');stopYT();toast('Key removed');closeSheet()}
   else if(a==='pref'){store.set('prefAudius',!store.get('prefAudius',true));sheetIn.innerHTML=ytSheet()}
+  else if(a==='name'){sheetIn.innerHTML=nameSheet();setTimeout(()=>{const i=$('#nm');if(i)i.focus()},50)}
+  else if(a==='namesave'){store.set('name',($('#nm').value||'').trim().slice(0,30));closeSheet();toast('Saved');route()}
   else if(a==='addartist'){const v=($('#newArtist').value||'').trim();if(v){const A=favArtists();if(!A.some(x=>x.toLowerCase()===v.toLowerCase())){A.push(v);store.set('artists',A)}closeSheet();toast('Added '+v);route()}}
   else if(a==='newpl'){sheetIn.innerHTML=sheetNewPl(t);$('#plName').focus()}
   else if(a==='mk'){
@@ -883,6 +908,7 @@ document.addEventListener('click',e=>{
   if(lk){e.stopPropagation();toggleLike(TR.get(lk.dataset.like));return}
   const mn=e.target.closest('[data-menu]');
   if(mn){e.stopPropagation();const t=TR.get(mn.dataset.menu);if(t)openSheet(menuFor(t));return}
+  if(e.target.closest('[data-name]')){openSheet(nameSheet());setTimeout(()=>{const i=$('#nm');if(i)i.focus()},50);return}
   const da=e.target.closest('[data-delartist]');
   if(da){e.stopPropagation();const n=da.dataset.delartist;store.set('artists',favArtists().filter(x=>x!==n));toast('Removed '+n);route();return}
   if(e.target.closest('[data-addartist]')){openSheet('<h3>Add an artist</h3><input id="newArtist" placeholder="Artist name" maxlength="60" aria-label="Artist name"><button class="cta" data-act="addartist">Add</button>');setTimeout(()=>{const i=$('#newArtist');if(i)i.focus()},50);return}
@@ -974,6 +1000,57 @@ $('#bPocket').addEventListener('click',()=>{if(!cur){toast('Play a song first');
 })();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&pocketOn&&!wl)lockScreen()});
 icons(document);
+
+/* ---------- intro ---------- */
+const nameSheet=()=>'<h3>What should Aura call you?</h3><input id="nm" placeholder="Your name" maxlength="30" value="'+esc(store.get('name','Gaurav'))+'" aria-label="Your name"><button class="cta" data-act="namesave">Save</button>';
+(function(){
+  const el=$('#intro');if(!el)return;
+  const reduce=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const nm=store.get('name','Gaurav');
+  $('#inHi').textContent=greet()+(nm?', '+nm:'');
+  $('#inArt').innerHTML=favArtists().slice(0,5).map((a,i)=>'<span style="animation-delay:'+(1.8+i*.25)+'s">'+esc(a)+'</span>').join('');
+  const cv=$('#introCv'),g=cv.getContext&&cv.getContext('2d');
+  let W=0,H=0;
+  const fit=()=>{if(!g)return;const d=Math.min(2,window.devicePixelRatio||1);W=cv.clientWidth;H=cv.clientHeight;cv.width=W*d;cv.height=H*d;g.setTransform(d,0,0,d,0,0)};
+  fit();window.addEventListener('resize',fit);
+  const DUR=reduce?1300:3900,N=72,t0=performance.now();
+  let raf=0,done=false;
+  function frame(now){
+    if(done)return;
+    const t=(now-t0)/1000,T=DUR/1000;
+    if(g){
+      g.clearRect(0,0,W,H);
+      const cx=W/2,cy=H*.33,R=Math.min(W*.2,H*.12);
+      const inn=Math.min(1,t/.7),env=inn*(t>T-.7?Math.max(0,(T-t)/.7):1),ease=1-Math.pow(1-inn,3);
+      const gl=g.createRadialGradient(cx,cy,R*.2,cx,cy,R*2.8);
+      gl.addColorStop(0,'hsla(275,95%,65%,'+(.4*env)+')');gl.addColorStop(1,'hsla(275,95%,65%,0)');
+      g.fillStyle=gl;g.fillRect(0,0,W,H);
+      g.lineCap='round';g.lineWidth=Math.max(2,R*.045);
+      for(let i=0;i<N;i++){
+        const a=i/N*Math.PI*2-Math.PI/2;
+        const amp=(.2+.8*Math.abs(Math.sin(t*2.6+i*.42)*Math.sin(t*1.7+i*.17)))*env;
+        const r1=R*1.14,r2=r1+R*.8*amp;
+        g.strokeStyle='hsl('+(265+i/N*120)+' 90% '+(58+amp*14)+'%)';
+        g.beginPath();g.moveTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);g.lineTo(cx+Math.cos(a)*r2,cy+Math.sin(a)*r2);g.stroke();
+      }
+      const rr=R*(1+.05*Math.sin(t*5.2))*(.15+.85*ease);
+      const og=g.createLinearGradient(cx-rr,cy-rr,cx+rr,cy+rr);og.addColorStop(0,'#be5cff');og.addColorStop(1,'#ff8a4c');
+      g.fillStyle=og;g.beginPath();g.arc(cx,cy,rr,0,Math.PI*2);g.fill();
+      const hl=g.createRadialGradient(cx-rr*.35,cy-rr*.4,0,cx-rr*.35,cy-rr*.4,rr*.8);
+      hl.addColorStop(0,'rgba(255,255,255,.45)');hl.addColorStop(1,'rgba(255,255,255,0)');
+      g.fillStyle=hl;g.beginPath();g.arc(cx,cy,rr,0,Math.PI*2);g.fill();
+    }
+    raf=requestAnimationFrame(frame);
+  }
+  function finish(){
+    if(done)return;done=true;cancelAnimationFrame(raf);
+    el.classList.add('out');setTimeout(()=>el.remove(),800);
+  }
+  el.addEventListener('click',finish);
+  document.addEventListener('keydown',finish,{once:true});
+  setTimeout(finish,DUR);
+  raf=requestAnimationFrame(frame);
+})();
 </script>
 </body>
 </html>
