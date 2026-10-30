@@ -1,1 +1,1 @@
-{"versionCode": 3, "notes": "Update versionCode and versionName in build.gradle.kts", "url": "https://gauravxads.github.io/aura/music.apk"}
+{"versionCode": 3, "notes": "Implement HideGuardService to manage app visibility  This service monitors the foreground app and hides it if the user leaves. It includes a notification for ongoing music playback.", "url": "https://gauravxads.github.io/aura/music.apk"}
