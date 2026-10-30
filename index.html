@@ -1020,7 +1020,7 @@ icons(document);
 const nameSheet=()=>'<h3>What should Aura call you?</h3><input id="nm" placeholder="Your name" maxlength="30" value="'+esc(store.get('name','Gaurav'))+'" aria-label="Your name"><button class="cta" data-act="namesave">Save</button>';
 const INTRO_KEYS=['pulse','vinyl','stardust'];
 const introPref=()=>store.get('introStyle','rotate');
-const introSoundOn=()=>store.get('introSound',true);
+const introSoundOn=()=>store.get('introSound',false);
 const INTRO_INNER='<canvas class="in-cv"></canvas><div class="in-center"><div class="in-word"><span>A</span><span>u</span><span>r</span><span>a</span></div><div class="in-hi"></div><div class="in-art"></div></div><div class="in-snd" hidden>Tap for sound</div><button class="in-skip">Skip</button>';
 const INTRO_T=5.9;
 let AC=null,AOUT=null,NOISE=null;
