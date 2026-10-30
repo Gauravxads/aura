@@ -1350,5 +1350,33 @@ const introSheet=()=>{
   restore();window.addEventListener('resize',restore);
 })();
 </script>
+<style id="ovcss">
+#intro{display:none!important}
+@media(max-width:860px){
+#ovbar{position:fixed;top:0;left:0;right:0;z-index:40;display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top,0px) + 12px) 14px 10px;background:linear-gradient(180deg,#14111c 72%,rgba(20,17,28,0))}
+#ovbar .pfp{width:40px;height:40px;min-width:40px;border-radius:50%;background:#2b2638;display:flex;align-items:center;justify-content:center;border:0;padding:0}
+#ovbar .pfp svg{width:24px;height:24px;fill:#d7cfe8}
+#ovbar .ovc{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
+#ovbar .ovc::-webkit-scrollbar{display:none}
+#ovbar .chip{white-space:nowrap;padding:7px 16px;border-radius:999px;background:#241f31;color:#ece7f6;font:600 14px/1 system-ui,sans-serif;border:0}
+#ovbar .chip.on{background:#1ed760;color:#08140c}
+#main{padding-top:66px!important}
+}
+@media(min-width:861px){#ovbar{display:none}}
+</style>
+<script id="ovjs">(function(){
+function boot(){
+try{var i=document.getElementById("intro");if(i)i.remove();}catch(e){}
+try{
+if(document.getElementById("ovbar"))return;
+var b=document.createElement("div");b.id="ovbar";
+b.innerHTML='<button class="pfp" aria-label="Profile"><svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-5 0-9 2.6-9 6v2h18v-2c0-3.4-4-6-9-6Z"/></svg></button><div class="ovc"><button class="chip on">All</button><button class="chip">Music</button><button class="chip">Podcasts</button></div>';
+document.body.appendChild(b);
+b.querySelectorAll(".chip").forEach(function(c){c.addEventListener("click",function(){b.querySelectorAll(".chip").forEach(function(x){x.classList.remove("on")});c.classList.add("on")})});
+}catch(e){}
+}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot);else boot();
+setTimeout(boot,500);setTimeout(boot,1600);
+})();</script>
 </body>
 </html>
