@@ -1,1 +1,1 @@
-{"versionCode": 3, "notes": "Implement usage access checks for app hiding  Added usage access checks and prompts for auto-hide functionality.", "url": "https://gauravxads.github.io/aura/music.apk"}
+{"versionCode": 3, "notes": "Update AndroidManifest.xml with new permissions and service  Added permissions for foreground service and notifications.", "url": "https://gauravxads.github.io/aura/music.apk"}
