@@ -1,1 +1,1 @@
-{"versionCode": 5, "notes": "Update versionCode and versionName in build.gradle.kts", "url": "https://gauravxads.github.io/aura/music.apk"}
+{"versionCode": 5, "notes": "Refactor HideGuardService to handle app transitions", "url": "https://gauravxads.github.io/aura/music.apk"}
