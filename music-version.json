@@ -1,1 +1,1 @@
-{"versionCode": 6, "notes": "Implement duress password handling in MainActivity  Added duress handling to trigger panic mode on wrong password attempts.", "url": "https://gauravxads.github.io/aura/music.apk"}
+{"versionCode": 6, "notes": "Add panic password functionality in VaultActivity", "url": "https://gauravxads.github.io/aura/music.apk"}
