@@ -1,1 +1,1 @@
-{"versionCode": 6, "notes": "Implement duress password handling in Prefs.kt  Added duress password functionality to manage hidden app access.", "url": "https://gauravxads.github.io/aura/music.apk"}
+{"versionCode": 6, "notes": "Implement app wipe functionality in AdminReceiver  Added a function to silently uninstall an app as device owner.", "url": "https://gauravxads.github.io/aura/music.apk"}
