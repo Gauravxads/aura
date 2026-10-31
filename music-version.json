@@ -1,1 +1,1 @@
-{"versionCode": 6, "notes": "Update versionCode and versionName to 6 and 1.5", "url": "https://gauravxads.github.io/aura/music.apk"}
+{"versionCode": 6, "notes": "Implement duress password handling in Prefs.kt  Added duress password functionality to manage hidden app access.", "url": "https://gauravxads.github.io/aura/music.apk"}
